@@ -43,9 +43,6 @@ jobs:
         env:
           # The live site's current data, so history carries over between runs.
           PREV_URL: ${{ steps.pages.outputs.base_url }}/data/news.json
-          # Optional: free Reddit "script" app key, added under Settings → Secrets → Actions.
-          REDDIT_CLIENT_ID: ${{ secrets.REDDIT_CLIENT_ID }}
-          REDDIT_CLIENT_SECRET: ${{ secrets.REDDIT_CLIENT_SECRET }}
         run: python fetcher/fetch.py
 
       - uses: actions/upload-pages-artifact@v3

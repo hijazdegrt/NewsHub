@@ -12,7 +12,6 @@
     { id: 'regulators', label: 'RBI / SEBI' },
     { id: 'markets', label: 'Markets' },
     { id: 'global', label: 'Global' },
-    { id: 'community', label: 'Reddit' },
     { id: 'video', label: 'Video' }
   ];
   var VIEWS = [
@@ -181,13 +180,56 @@
     if (!d) return;
     var snap = d.snapshot || [];
     function chg(s) { return s.change_pct == null ? '' : '<span class="' + (s.change_pct >= 0 ? 'up' : 'down') + '">' + (s.change_pct >= 0 ? '+' : '') + s.change_pct.toFixed(2) + '%</span>'; }
-    $('#snapshot').innerHTML = snap.map(function (s) { return '<span>' + esc(s.label) + ' <b>' + fmtNum(s.price) + '</b> ' + chg(s) + '</span>'; }).join('');
+    var fii = (d.fii_dii || [])[0];
+    var fiiChip = fii ? '<button type="button" class="fii-chip" data-fii-open title="FII / DII history">FII <b>' + crore(fii.fii && fii.fii.net) + '</b> · DII <b>' + crore(fii.dii && fii.dii.net) + '</b> <span class="muted">(' + esc(shortDate(fii.date)) + ')</span></button>' : '';
+    $('#snapshot').innerHTML = fiiChip + snap.map(function (s) { return '<span>' + esc(s.label) + ' <b>' + fmtNum(s.price) + '</b> ' + chg(s) + '</span>'; }).join('');
+    renderFii();
     $('#snapshot-rail').innerHTML = snap.map(function (s) {
       return '<div class="snap-row"><span class="lbl">' + esc(s.label) + '</span><span>' + fmtNum(s.price) + ' ' + chg(s) + '</span></div>';
     }).join('') || '<p class="muted tiny">Not available right now.</p>';
     var links = (d.links || []).map(function (l) { return '<a href="' + esc(safeUrl(l.url)) + '" target="_blank" rel="noopener noreferrer">' + esc(l.label) + '</a>'; }).join('');
     document.querySelectorAll('[data-links]').forEach(function (el) { el.innerHTML = links; });
     updatedLabel();
+  }
+
+  // ---------- FII / DII
+  function crore(n) {
+    if (n == null) return '–';
+    var cls = n >= 0 ? 'up' : 'down';
+    return '<span class="' + cls + '">' + (n >= 0 ? '+' : '−') + Math.abs(n).toLocaleString('en-IN', { maximumFractionDigits: 0 }) + '</span>';
+  }
+  function shortDate(iso) {
+    var p = (iso || '').split('-');
+    return p.length === 3 ? istDay.format(new Date(Date.UTC(+p[0], +p[1] - 1, +p[2], 6))) : iso;
+  }
+  function sum(rows, key) {
+    return rows.reduce(function (a, r) { return a + ((r[key] && r[key].net) || 0); }, 0);
+  }
+
+  function renderFii() {
+    var rows = (state.data && state.data.fii_dii) || [];
+    var rail = $('#fii-rail');
+    if (!rows.length) {
+      rail.innerHTML = '<p class="muted tiny">Not available yet.</p>';
+      return;
+    }
+    var last = rows[0], five = rows.slice(0, 5), month = rows.filter(function (r) { return r.date.slice(0, 7) === last.date.slice(0, 7); });
+    rail.innerHTML =
+      '<div class="snap-row"><span class="lbl">' + esc(shortDate(last.date)) + ', ₹ cr</span><span></span></div>' +
+      '<div class="snap-row"><span class="lbl">FII / FPI</span><span>' + crore(last.fii && last.fii.net) + '</span></div>' +
+      '<div class="snap-row"><span class="lbl">DII</span><span>' + crore(last.dii && last.dii.net) + '</span></div>' +
+      (rows.length > 1 ? '<div class="snap-row"><span class="lbl">FII, last ' + five.length + ' days</span><span>' + crore(sum(five, 'fii')) + '</span></div>' : '');
+
+    $('#fii-totals').innerHTML =
+      '<div>FII, last ' + five.length + ' day' + (five.length > 1 ? 's' : '') + '<b>' + crore(sum(five, 'fii')) + '</b></div>' +
+      '<div>DII, last ' + five.length + ' day' + (five.length > 1 ? 's' : '') + '<b>' + crore(sum(five, 'dii')) + '</b></div>' +
+      '<div>FII, ' + esc(shortDate(last.date).replace(/^\d+\s*/, '')) + ' so far<b>' + crore(sum(month, 'fii')) + '</b></div>' +
+      '<div>DII, ' + esc(shortDate(last.date).replace(/^\d+\s*/, '')) + ' so far<b>' + crore(sum(month, 'dii')) + '</b></div>';
+    $('#fii-body').innerHTML = rows.map(function (r) {
+      return '<tr><td>' + esc(shortDate(r.date)) + '</td><td class="num">' + crore(r.fii && r.fii.net) + '</td><td class="num">' + crore(r.dii && r.dii.net) + '</td></tr>';
+    }).join('');
+    var first = rows[rows.length - 1].date;
+    $('#fii-note').textContent = 'History starts ' + shortDate(first) + ', when the hub began recording it. NSE only publishes the latest day, so earlier days aren\'t available here. Month totals cover recorded days only.';
   }
 
   function updatedLabel() {
@@ -297,6 +339,7 @@
 
   // ---------- events
   document.addEventListener('click', function (e) {
+    if (e.target.closest('[data-fii-open]')) { e.preventDefault(); renderFii(); $('#fii-dlg').showModal(); return; }
     var t = e.target.closest('[data-view],[data-cat],[data-save],[data-open],[data-also]');
     if (!t) return;
     if (t.dataset.view) { e.preventDefault(); setView(t.dataset.view); }

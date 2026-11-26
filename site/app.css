@@ -104,6 +104,16 @@ main { padding: var(--space-3) var(--space-4) var(--space-8); }
 .empty strong { display: block; color: var(--foreground); margin-bottom: var(--space-1); }
 .more { display: flex; justify-content: center; padding: var(--space-4) 0; }
 
+/* FII / DII */
+.snapshot .fii-chip { background: none; border: 0; padding: 0; font: inherit; color: var(--muted-foreground); cursor: pointer; white-space: nowrap; }
+.snapshot .fii-chip b { color: var(--foreground); font-weight: var(--font-medium); }
+#fii-dlg { max-width: 30rem; width: calc(100vw - 2rem); }
+#fii-dlg td, #fii-dlg th { font-size: var(--text-8); font-variant-numeric: tabular-nums; }
+#fii-dlg .num { text-align: right; }
+.fii-totals { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); margin-bottom: var(--space-3); }
+.fii-totals div { background: var(--muted); border-radius: var(--radius-medium); padding: var(--space-2) var(--space-3); font-size: var(--text-8); color: var(--muted-foreground); }
+.fii-totals b { display: block; font-size: var(--text-7); color: var(--foreground); font-weight: var(--font-medium); font-variant-numeric: tabular-nums; }
+
 /* sources dialog */
 #sources-dlg { max-width: 34rem; width: calc(100vw - 2rem); }
 .table-wrap { max-height: 60vh; overflow: auto; }

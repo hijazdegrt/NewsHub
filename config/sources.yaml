@@ -3,7 +3,7 @@
 # Fields:
 #   id        short unique name (letters, numbers, dashes)
 #   name      what the page shows as the source
-#   category  filings | regulators | markets | global | community | video
+#   category  filings | regulators | markets | global | video
 #   type      rss (default) | gnews (Google News search) | youtube
 #   url       for type rss
 #   query     for type gnews (Google News search syntax, e.g. site:moneycontrol.com)
@@ -67,28 +67,6 @@ sources:
     category: global
     type: gnews
     query: site:reuters.com markets when:1d
-
-  # Community. Reddit blocks anonymous readers, so these need a free Reddit API
-  # key (see "Reddit" in README.md). Without one they're tried and usually fail.
-  #   sort: hot (default) | new | top
-  - id: reddit-indiainvestments
-    name: r/IndiaInvestments
-    category: community
-    type: reddit
-    subreddit: IndiaInvestments
-    optional: true
-  - id: reddit-indianstockmarket
-    name: r/IndianStockMarket
-    category: community
-    type: reddit
-    subreddit: IndianStockMarket
-    optional: true
-  - id: reddit-dalalstreettalks
-    name: r/DalalStreetTalks
-    category: community
-    type: reddit
-    subreddit: DalalStreetTalks
-    optional: true
 
   # Video
   - id: yt-cnbctv18

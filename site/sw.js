@@ -1,6 +1,6 @@
 // Service worker: makes the hub installable and opens it offline with the last loaded news.
 // Bump VERSION whenever index.html, app.css, app.js or the Oat files change.
-const VERSION = 'mh-v1';
+const VERSION = 'mh-v2';
 const SHELL = [
   './',
   'index.html',

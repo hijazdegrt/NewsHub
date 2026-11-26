@@ -145,82 +145,12 @@ def source_url(src: dict) -> str:
         return f"https://news.google.com/rss/search?q={quote_plus(src['query'])}&hl=en-IN&gl=IN&ceid=IN:en"
     if kind == "youtube":
         return f"https://www.youtube.com/feeds/videos.xml?channel_id={src['channel']}"
-    if kind == "reddit":  # used only when there is no Reddit API key
-        return f"https://www.reddit.com/r/{src['subreddit']}/.rss"
     return src["url"]
 
 
-# ---------------------------------------------------------------- Reddit API
-# Reddit blocks anonymous automated readers. With a free "script" app key
-# (REDDIT_CLIENT_ID / REDDIT_CLIENT_SECRET, stored as GitHub secrets) the
-# fetcher signs in as the app and reads subreddits through the official API.
-
-REDDIT_UA = "python:newshub-reader:v1.0 (personal news reader)"
-_reddit_token: str | None = None
-
-
-def reddit_login(client: httpx.Client) -> str | None:
-    cid, secret = os.environ.get("REDDIT_CLIENT_ID"), os.environ.get("REDDIT_CLIENT_SECRET")
-    if not cid or not secret:
-        return None
-    try:
-        r = client.post(
-            "https://www.reddit.com/api/v1/access_token",
-            auth=(cid, secret),
-            data={"grant_type": "client_credentials"},
-            headers={"User-Agent": REDDIT_UA},
-        )
-        token = r.json().get("access_token") if r.status_code == 200 else None
-        print(f"  Reddit API login: {'ok' if token else f'failed (HTTP {r.status_code})'}")
-        return token
-    except (httpx.HTTPError, ValueError) as e:
-        print(f"  Reddit API login failed: {type(e).__name__}")
-        return None
-
-
-def fetch_reddit_api(client: httpx.Client, src: dict) -> tuple[list[dict], str]:
-    r = client.get(
-        f"https://oauth.reddit.com/r/{src['subreddit']}/{src.get('sort', 'hot')}",
-        params={"limit": src.get("limit", 30), "raw_json": 1},
-        headers={"Authorization": f"Bearer {_reddit_token}", "User-Agent": REDDIT_UA},
-    )
-    if r.status_code != 200:
-        return [], f"HTTP {r.status_code}"
-    items = []
-    for child in r.json().get("data", {}).get("children", []):
-        p = child.get("data", {})
-        if p.get("stickied") or p.get("over_18") or not p.get("title"):
-            continue
-        link = "https://www.reddit.com" + p.get("permalink", "")
-        title = clean(p["title"])
-        items.append({
-            "id": item_id(link, title),
-            "title": title,
-            "link": link,
-            "source": src["name"],
-            "source_id": src["id"],
-            "category": src["category"],
-            "official": False,
-            "time": iso(datetime.fromtimestamp(p.get("created_utc", time.time()), tz=timezone.utc)),
-            "summary": short(clean(p.get("selftext"))),
-        })
-    return items, ""
-
-
 def fetch_source(client: httpx.Client, src: dict) -> tuple[list[dict], dict]:
-    status = {"id": src["id"], "name": src["name"], "category": src["category"], "optional": bool(src.get("optional"))}
-    if src.get("type") == "reddit" and _reddit_token:
-        try:
-            items, err = fetch_reddit_api(client, src)
-        except (httpx.HTTPError, ValueError) as e:
-            items, err = [], type(e).__name__
-        if items:
-            status.update(ok=True, count=len(items))
-        else:
-            status.update(ok=False, count=0, error=err or "no items")
-        return items, status
-
     url = source_url(src)
+    status = {"id": src["id"], "name": src["name"], "category": src["category"], "optional": bool(src.get("optional"))}
     last_err = ""
     for attempt in range(2):
         try:
@@ -239,8 +169,6 @@ def fetch_source(client: httpx.Client, src: dict) -> tuple[list[dict], dict]:
             last_err = type(e).__name__
         if attempt == 0:
             time.sleep(2)
-    if src.get("type") == "reddit":
-        last_err += " (no Reddit API key set)"
     status.update(ok=False, count=0, error=last_err)
     return [], status
 
@@ -309,19 +237,68 @@ def fetch_snapshot(client: httpx.Client, symbols: list[dict]) -> list[dict]:
     return out
 
 
-def load_previous(client: httpx.Client) -> list[dict]:
+def load_previous(client: httpx.Client) -> dict:
+    """The last published news.json (items plus FII/DII history), or {} on the first run."""
     prev_url = os.environ.get("PREV_URL")
     try:
         if prev_url:
             r = client.get(prev_url)
             if r.status_code == 200:
-                return r.json().get("items", [])
+                return r.json()
             print(f"  previous data: HTTP {r.status_code} (first run?)")
         elif OUT.exists():
-            return json.loads(OUT.read_text(encoding="utf-8")).get("items", [])
+            return json.loads(OUT.read_text(encoding="utf-8"))
     except (httpx.HTTPError, ValueError) as e:
         print(f"  previous data unavailable: {type(e).__name__}")
-    return []
+    return {}
+
+
+# ---------------------------------------------------------------- FII / DII
+# NSE publishes provisional cash-market FII/FPI and DII figures (in Rs crore)
+# every trading evening. The endpoint only returns the latest day, so each run
+# adds that day to the history carried over in news.json.
+
+FII_DII_URL = "https://www.nseindia.com/api/fiidiiTradeReact"
+FII_DII_KEEP_DAYS = 120
+
+
+def _num(v) -> float | None:
+    try:
+        return round(float(str(v).replace(",", "")), 2)
+    except (TypeError, ValueError):
+        return None
+
+
+def fetch_fii_dii(client: httpx.Client) -> tuple[dict | None, dict]:
+    status = {"id": "nse-fii-dii", "name": "NSE FII/DII", "category": "data", "optional": False}
+    try:
+        r = client.get(FII_DII_URL, headers={"Accept": "application/json", "Referer": "https://www.nseindia.com/reports/fii-dii"})
+        if r.status_code != 200:
+            status.update(ok=False, count=0, error=f"HTTP {r.status_code}")
+            return None, status
+        row: dict = {}
+        for rec in r.json():
+            key = "fii" if "FII" in rec.get("category", "").upper() else "dii" if "DII" in rec.get("category", "").upper() else None
+            if not key:
+                continue
+            row["date"] = datetime.strptime(rec["date"], "%d-%b-%Y").strftime("%Y-%m-%d")
+            row[key] = {"buy": _num(rec.get("buyValue")), "sell": _num(rec.get("sellValue")), "net": _num(rec.get("netValue"))}
+        if "date" not in row:
+            status.update(ok=False, count=0, error="unexpected format")
+            return None, status
+        status.update(ok=True, count=1)
+        return row, status
+    except (httpx.HTTPError, ValueError, KeyError, TypeError) as e:
+        status.update(ok=False, count=0, error=type(e).__name__)
+        return None, status
+
+
+def merge_fii_dii(previous: list[dict], latest: dict | None, now: datetime) -> list[dict]:
+    by_date = {r["date"]: r for r in previous if r.get("date")}
+    if latest:
+        by_date[latest["date"]] = latest
+    cutoff = (now - timedelta(days=FII_DII_KEEP_DAYS)).strftime("%Y-%m-%d")
+    return sorted((r for d, r in by_date.items() if d >= cutoff), key=lambda r: r["date"], reverse=True)
 
 
 # ---------------------------------------------------------------- processing
@@ -428,15 +405,17 @@ def main() -> int:
     now = datetime.now(timezone.utc)
 
     with httpx.Client(headers={"User-Agent": UA, "Accept-Language": "en-IN,en;q=0.9"}, follow_redirects=True, timeout=25) as client:
-        previous = load_previous(client)
-        global _reddit_token
-        _reddit_token = reddit_login(client)
+        prev = load_previous(client)
+        known = {src["id"] for src in cfg["sources"]}
+        previous = [it for it in prev.get("items", []) if it.get("source_id") in known]  # drops removed sources
+        fii_latest, fii_status = fetch_fii_dii(client)
         with ThreadPoolExecutor(max_workers=8) as pool:
             results = list(pool.map(lambda s: fetch_source(client, s), cfg["sources"]))
         snapshot = fetch_snapshot(client, cfg.get("snapshot", []))
 
     fresh = [it for items, _ in results for it in items]
-    statuses = [st for _, st in results]
+    statuses = [st for _, st in results] + [fii_status]
+    fii_dii = merge_fii_dii(prev.get("fii_dii", []), fii_latest, now)
     for st in statuses:
         mark = "ok " if st["ok"] else ("-- " if st["optional"] else "ERR")
         print(f"  {mark} {st['id']:28} {st.get('count', 0):4} {st.get('error', '')}")
@@ -457,6 +436,7 @@ def main() -> int:
         "generated_at": iso(now),
         "watchlist": [name for name, _ in watch],
         "snapshot": snapshot,
+        "fii_dii": fii_dii,
         "links": cfg.get("links", []),
         "sources": statuses,
         "items": items,

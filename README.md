@@ -1,7 +1,7 @@
 # Market hub
 
 A personal news hub for Indian markets. It pulls exchange filings, RBI and SEBI
-updates, market news, global cues, Reddit and YouTube into one page that you can
+updates, FII/DII flows, market news, global cues and YouTube into one page that you can
 open on any device.
 
 - **Fetcher:** `fetcher/fetch.py` (Python) reads every source in `config/sources.yaml`,
@@ -54,30 +54,11 @@ python -m http.server 8765 --directory site
 
 Then open http://localhost:8765.
 
-## Reddit
-
-Reddit blocks anonymous automated readers, so the Reddit sources need a free API key.
-
-1. Signed in to Reddit, open https://www.reddit.com/prefs/apps and click
-   **create another app** (or **are you a developer? create an app**).
-2. Name it anything (for example `newshub`), choose **script**, and enter
-   `http://localhost` as the redirect URI. Click **create app**.
-   If Reddit asks you to request API access first, fill in that form for personal,
-   non-commercial use and wait for approval.
-3. Copy two values: the **client ID** (the short code under the app name) and the **secret**.
-4. In this repository on GitHub, open **Settings → Secrets and variables → Actions** and
-   add two repository secrets: `REDDIT_CLIENT_ID` and `REDDIT_CLIENT_SECRET`.
-5. Run the **Update news** workflow. **Source status** should show the Reddit feeds as OK.
-
-To read the API locally, set the same two values as environment variables before
-running the fetcher.
-
 ## Good to know
 
 - **Your watchlist is public**, because the repository has to be public for free GitHub Pages.
 - **Updates can arrive 5 to 15 minutes late.** GitHub often starts scheduled jobs late.
-- **Some sources may fail.** Reddit needs an API key (see above), and NSE may block
-  GitHub's servers. Open **Source status** at the bottom of the menu to see what worked
+- **Some sources may fail.** NSE, for example, may block GitHub's servers. Open **Source status** at the bottom of the menu to see what worked
   on the last run. One failing source doesn't stop the others.
 - **Moneycontrol and SEBI come from Google News searches**, because their own RSS
   feeds stopped updating.

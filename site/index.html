@@ -90,6 +90,11 @@
           <p class="muted tiny" id="snap-note">Delayed about 15 min.</p>
         </article>
         <article class="card">
+          <header><h4>FII / DII flows</h4></header>
+          <div id="fii-rail" class="snap-list"><p class="muted tiny">Not available yet.</p></div>
+          <p class="tiny"><a href="#" data-fii-open>View history</a></p>
+        </article>
+        <article class="card">
           <header><h4>Quick links</h4></header>
           <div class="links" data-links></div>
         </article>
@@ -104,6 +109,16 @@
     <button data-view="important" aria-label="Important"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v10M12 18v2"/></svg><span>Important</span></button>
     <button data-view="saved" aria-label="Saved"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18l-6-4-6 4z"/></svg><span>Saved</span></button>
   </nav>
+
+  <dialog id="fii-dlg">
+    <form method="dialog">
+      <header><h3>FII / DII flows</h3><p class="muted">NSE provisional cash-market figures, net buying in ₹ crore.</p></header>
+      <div id="fii-totals" class="fii-totals"></div>
+      <div class="table-wrap"><table><thead><tr><th>Date</th><th class="num">FII / FPI</th><th class="num">DII</th></tr></thead><tbody id="fii-body"></tbody></table></div>
+      <p class="muted tiny" id="fii-note"></p>
+      <footer><button>Close</button></footer>
+    </form>
+  </dialog>
 
   <dialog id="sources-dlg">
     <form method="dialog">
