@@ -3,8 +3,10 @@ name: Update news
 on:
   schedule:
     # GitHub cron runs in UTC. IST = UTC + 5:30.
-    - cron: "*/15 2-10 * * 1-5"   # every 15 min, 7:30 to 16:45 IST, Monday to Friday
-    - cron: "5 * * * *"           # hourly at all other times (and weekends)
+    # Odd minutes on purpose: GitHub delays or drops runs set for :00/:15/:30/:45,
+    # when everyone else's scheduled jobs start.
+    - cron: "7,22,37,52 2-10 * * 1-5"   # every 15 min, 7:30 to 16:45 IST, Monday to Friday
+    - cron: "43 * * * *"                # hourly at all other times (and weekends)
     - cron: "17 0 * * 0"          # weekly keep-alive (see the keepalive job)
   push:
     branches: [main]
