@@ -1,21 +1,15 @@
-# Your stocks. Any headline or filing that mentions one of these gets a
-# "Watchlist" tag and shows in the Watchlist view.
+# Optional. The usual way to follow stocks is the Watchlist screen in the app:
+# it's private to each device, and "Copy a link" moves it to another device.
+#
+# Stocks listed here are tagged for everyone who opens the site, because this
+# repository is public.
 #
 #   name     shown on the tag
-#   match    words to look for (case doesn't matter, whole words only).
-#            Include the company's full name as NSE writes it, so filings match.
+#   match    words to look for (case doesn't matter, whole words only)
 #
-# These are examples: replace them with your own.
-# Note: this repository is public, so anyone can read this file.
+# Example:
+#   stocks:
+#     - name: Reliance
+#       match: [Reliance Industries, RIL]
 
-stocks:
-  - name: Reliance
-    match: [Reliance Industries, RIL]
-  - name: HDFC Bank
-    match: [HDFC Bank]
-  - name: TCS
-    match: [Tata Consultancy Services, TCS]
-  - name: Infosys
-    match: [Infosys]
-  - name: ICICI Bank
-    match: [ICICI Bank]
+stocks: []

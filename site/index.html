@@ -77,6 +77,15 @@
 
     <div class="layout">
       <section aria-label="News feed">
+        <div id="wl-panel" class="wl-panel" hidden>
+          <div class="wl-add">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+            <input id="wl-input" type="search" placeholder="Add a stock: name or NSE symbol" aria-label="Add a stock" autocomplete="off" enterkeyhint="done">
+            <ul id="wl-suggest" class="wl-suggest" role="listbox" hidden></ul>
+          </div>
+          <div id="wl-chips" class="wl-chips"></div>
+          <p id="wl-foot" class="muted tiny" hidden>Tap a stock to change the words it matches or remove it. Your list is saved on this device only. <a href="#" id="wl-share">Copy a link to add it on another device</a></p>
+        </div>
         <div class="feedbar">
           <span id="unread" class="muted"></span>
           <button id="readall" type="button" class="outline small">Mark all read</button>
@@ -115,6 +124,21 @@
     <button data-view="important" aria-label="Important"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v10M12 18v2"/></svg><span>Important</span></button>
     <button data-view="saved" aria-label="Saved"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18l-6-4-6 4z"/></svg><span>Saved</span></button>
   </nav>
+
+  <dialog id="wl-dlg">
+    <form method="dialog">
+      <header><h3 id="wl-dlg-title">Stock</h3></header>
+      <label for="wl-terms">Words to look for</label>
+      <input id="wl-terms" type="text" autocomplete="off" placeholder="Reliance Industries, Reliance, RIL">
+      <p class="muted tiny">Separate names with commas. Headlines often use a shorter name, so add the ones you see in the news. <span id="wl-dlg-symbol"></span></p>
+      <footer class="wl-dlg-foot">
+        <button type="submit" id="wl-remove" class="outline" data-variant="danger" value="remove">Remove</button>
+        <span class="spacer"></span>
+        <button type="submit" class="outline" value="cancel">Cancel</button>
+        <button type="submit" id="wl-save" value="save">Save</button>
+      </footer>
+    </form>
+  </dialog>
 
   <dialog id="fii-dlg">
     <form method="dialog">

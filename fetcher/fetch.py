@@ -8,8 +8,10 @@ latest items.
 
 from __future__ import annotations
 
+import csv
 import hashlib
 import html
+import io
 import json
 import os
 import re
@@ -28,6 +30,7 @@ import yaml
 ROOT = Path(__file__).resolve().parent.parent
 CONFIG = ROOT / "config"
 OUT = ROOT / "site" / "data" / "news.json"
+STOCKS_OUT = ROOT / "site" / "data" / "stocks.json"
 
 IST = timezone(timedelta(hours=5, minutes=30))
 KEEP_DAYS = 7
@@ -301,6 +304,51 @@ def merge_fii_dii(previous: list[dict], latest: dict | None, now: datetime) -> l
     return sorted((r for d, r in by_date.items() if d >= cutoff), key=lambda r: r["date"], reverse=True)
 
 
+# ---------------------------------------------------------------- company list
+# NSE's list of listed companies, published as data/stocks.json for the
+# watchlist search box: [[symbol, name], ...].
+
+EQUITY_LIST_URL = "https://nsearchives.nseindia.com/content/equities/EQUITY_L.csv"
+
+
+def write_company_list(client: httpx.Client) -> dict:
+    status = {"id": "nse-company-list", "name": "NSE company list", "category": "data", "optional": True}
+    rows = None
+    try:
+        r = client.get(EQUITY_LIST_URL)
+        if r.status_code == 200:
+            reader = csv.DictReader(io.StringIO(r.text))
+            rows = sorted(
+                {(rec["SYMBOL"].strip(), rec["NAME OF COMPANY"].strip()) for rec in reader if rec.get("SYMBOL")},
+                key=lambda x: x[0],
+            )
+        else:
+            status["error"] = f"HTTP {r.status_code}"
+    except (httpx.HTTPError, csv.Error, KeyError) as e:
+        status["error"] = type(e).__name__
+
+    if not rows:
+        # Keep the copy that is already published so search keeps working.
+        prev_url = os.environ.get("PREV_URL")
+        try:
+            if prev_url:
+                r = client.get(prev_url.rsplit("/", 1)[0] + "/stocks.json")
+                rows = r.json() if r.status_code == 200 else None
+            elif STOCKS_OUT.exists():
+                rows = json.loads(STOCKS_OUT.read_text(encoding="utf-8"))
+        except (httpx.HTTPError, ValueError):
+            rows = None
+        status.update(ok=False, count=len(rows or []))
+        if not rows:
+            return status
+    else:
+        status.update(ok=True, count=len(rows))
+
+    STOCKS_OUT.parent.mkdir(parents=True, exist_ok=True)
+    STOCKS_OUT.write_text(json.dumps([list(x) for x in rows], ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+    return status
+
+
 # ---------------------------------------------------------------- processing
 
 
@@ -409,12 +457,13 @@ def main() -> int:
         known = {src["id"] for src in cfg["sources"]}
         previous = [it for it in prev.get("items", []) if it.get("source_id") in known]  # drops removed sources
         fii_latest, fii_status = fetch_fii_dii(client)
+        list_status = write_company_list(client)
         with ThreadPoolExecutor(max_workers=8) as pool:
             results = list(pool.map(lambda s: fetch_source(client, s), cfg["sources"]))
         snapshot = fetch_snapshot(client, cfg.get("snapshot", []))
 
     fresh = [it for items, _ in results for it in items]
-    statuses = [st for _, st in results] + [fii_status]
+    statuses = [st for _, st in results] + [fii_status, list_status]
     fii_dii = merge_fii_dii(prev.get("fii_dii", []), fii_latest, now)
     for st in statuses:
         mark = "ok " if st["ok"] else ("-- " if st["optional"] else "ERR")
