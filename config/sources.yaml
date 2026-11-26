@@ -96,5 +96,4 @@ links:
   - { label: NSE announcements, url: "https://www.nseindia.com/companies-listing/corporate-filings-announcements" }
   - { label: BSE announcements, url: "https://www.bseindia.com/corporates/ann.html" }
   - { label: GIFT Nifty, url: "https://www.nseix.com/" }
-  - { label: FII/DII data, url: "https://www.nseindia.com/reports/fii-dii" }
   - { label: Sensibull, url: "https://web.sensibull.com/" }

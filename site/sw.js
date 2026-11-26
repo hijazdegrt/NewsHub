@@ -1,6 +1,7 @@
-// Service worker: makes the hub installable and opens it offline with the last loaded news.
-// Bump VERSION whenever index.html, app.css, app.js or the Oat files change.
-const VERSION = 'mh-v2';
+// Service worker: makes the hub installable and opens it offline with the last loaded copy.
+// Everything is fetched from the network first, so a new version shows up on the next
+// load. The cache is only used when the network fails or takes longer than 4 seconds.
+const VERSION = 'mh-v3';
 const SHELL = [
   './',
   'index.html',
@@ -11,9 +12,14 @@ const SHELL = [
   'vendor/oat/oat.min.css',
   'vendor/oat/oat.min.js'
 ];
+const TIMEOUT_MS = 4000;
 
 self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open(VERSION).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));
+  e.waitUntil(
+    caches.open(VERSION)
+      .then((c) => c.addAll(SHELL.map((u) => new Request(u, { cache: 'reload' }))))
+      .then(() => self.skipWaiting())
+  );
 });
 
 self.addEventListener('activate', (e) => {
@@ -28,28 +34,21 @@ self.addEventListener('fetch', (e) => {
   const url = new URL(e.request.url);
   if (e.request.method !== 'GET' || url.origin !== location.origin) return;
 
-  // News data: always try the network first, fall back to the last copy.
-  if (url.pathname.endsWith('/data/news.json')) {
-    e.respondWith(
-      fetch(e.request)
-        .then((res) => {
-          const copy = res.clone();
-          caches.open(VERSION).then((c) => c.put(new Request(url.pathname), copy));
-          return res;
-        })
-        .catch(() => caches.match(new Request(url.pathname)))
-    );
-    return;
-  }
+  // One cache entry per path (ignores ?t= cache-busting on news.json).
+  const key = new Request(url.pathname.endsWith('/') ? url.pathname + 'index.html' : url.pathname);
 
-  // App files: serve from cache, refresh in the background.
+  const network = fetch(url.href, { cache: 'no-cache' }).then((res) => {
+    if (res.ok) {
+      const copy = res.clone();
+      caches.open(VERSION).then((c) => c.put(key, copy));
+    }
+    return res;
+  });
+  const fallback = () => caches.match(key).then((hit) => hit || caches.match(e.request));
+  const slow = new Promise((resolve) => setTimeout(resolve, TIMEOUT_MS)).then(fallback);
+
   e.respondWith(
-    caches.match(e.request).then((hit) => {
-      const net = fetch(e.request).then((res) => {
-        if (res.ok) caches.open(VERSION).then((c) => c.put(e.request, res.clone()));
-        return res;
-      }).catch(() => hit);
-      return hit || net;
-    })
+    Promise.race([network.catch(fallback), slow.then((hit) => hit || network)])
+      .then((res) => res || network)
   );
 });
