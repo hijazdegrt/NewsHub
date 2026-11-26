@@ -1,7 +1,7 @@
 // Service worker: makes the hub installable and opens it offline with the last loaded copy.
 // Everything is fetched from the network first, so a new version shows up on the next
 // load. The cache is only used when the network fails or takes longer than 4 seconds.
-const VERSION = 'mh-v3';
+const VERSION = 'mh-v4';
 const SHELL = [
   './',
   'index.html',

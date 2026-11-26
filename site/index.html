@@ -10,7 +10,9 @@
   <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <!-- "black", not "black-translucent": iOS shrinks home-screen apps by the status bar's
+       height in translucent mode, which leaves a gap under the bottom navigation. -->
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <script>
     // Apply the saved theme before anything paints. Dark is the default.
     (function () {
@@ -75,6 +77,10 @@
 
     <div class="layout">
       <section aria-label="News feed">
+        <div class="feedbar">
+          <span id="unread" class="muted"></span>
+          <button id="readall" type="button" class="outline small">Mark all read</button>
+        </div>
         <div id="feed" class="feed" aria-live="polite">
           <article class="item"><div role="status" class="skeleton line"></div><div role="status" class="skeleton line" style="width:70%"></div></article>
           <article class="item"><div role="status" class="skeleton line"></div><div role="status" class="skeleton line" style="width:55%"></div></article>

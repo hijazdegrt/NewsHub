@@ -153,6 +153,7 @@
       out.push(itemHtml(it, i));
     }
     feedEl.innerHTML = n ? out.join('') : emptyHtml();
+    updateUnread();
     $('#more').hidden = list.length <= n;
     $('#more').textContent = 'Show more (' + (list.length - n) + ' left)';
     state.focus = -1;
@@ -305,14 +306,36 @@
     }
   }
 
+  function saveRead() { store.set('read', Array.from(state.read).slice(-3000)); }
+
   function markRead(i) {
     var it = state.list[i];
     if (!it) return;
     state.read.add(it.id);
-    var arr = Array.from(state.read);
-    store.set('read', arr.slice(-3000));
+    saveRead();
     var el = feedEl.querySelector('[data-i="' + i + '"]');
     if (el) el.classList.add('read');
+    updateUnread();
+  }
+
+  function updateUnread() {
+    var n = state.list.filter(function (it) { return !state.read.has(it.id); }).length;
+    var btn = $('#readall');
+    $('#unread').innerHTML = !state.list.length ? '' : n ? '<b>' + n.toLocaleString('en-IN') + '</b> unread' : 'All caught up';
+    btn.hidden = n === 0 || state.view === 'saved';
+  }
+
+  // Marks everything in the current view (category, search and filters applied) as read.
+  function markAllRead() {
+    var n = 0;
+    state.list.forEach(function (it) { if (!state.read.has(it.id)) { state.read.add(it.id); n++; } });
+    saveRead();
+    if (state.data && state.view === 'all' && state.cat === 'all' && !state.q) {
+      state.prevVisit = state.data.generated_at;   // the "Seen before this" line moves to the top
+      store.set('lastVisit', state.prevVisit);
+    }
+    renderFeed();
+    if (n && window.ot) ot.toast('Marked ' + n.toLocaleString('en-IN') + ' ' + (n === 1 ? 'story' : 'stories') + ' as read.', '', { placement: 'bottom-center', duration: 2500 });
   }
 
   function showAlso(i, btn) {
@@ -350,6 +373,7 @@
   });
 
   $('#more').addEventListener('click', function () { state.shown += PAGE; renderFeed(); });
+  $('#readall').addEventListener('click', markAllRead);
 
   var qTimer;
   $('#q').addEventListener('input', function (e) {

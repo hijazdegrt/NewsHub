@@ -75,6 +75,9 @@ main { padding: var(--space-3) var(--space-4) var(--space-8); }
 .chip[aria-selected="true"] { background: var(--hub-accent-soft); color: var(--hub-accent); border-color: var(--hub-accent); }
 
 /* ---------- feed */
+.feedbar { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); margin-bottom: var(--space-2); font-size: var(--text-8); min-height: 2rem; }
+.feedbar b { color: var(--foreground); font-weight: var(--font-medium); }
+.feedbar button { margin: 0; }
 .feed { display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: var(--radius-large); overflow: hidden; background: var(--card); }
 .item { position: relative; padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--border); margin: 0; background: none; box-shadow: none; border-radius: 0; outline: none; }
 .item:last-child { border-bottom: 0; }
