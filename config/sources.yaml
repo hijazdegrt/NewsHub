@@ -68,21 +68,26 @@ sources:
     type: gnews
     query: site:reuters.com markets when:1d
 
-  # Community (Reddit often rate-limits automated readers, so these may fail)
+  # Community. Reddit blocks anonymous readers, so these need a free Reddit API
+  # key (see "Reddit" in README.md). Without one they're tried and usually fail.
+  #   sort: hot (default) | new | top
   - id: reddit-indiainvestments
     name: r/IndiaInvestments
     category: community
-    url: https://www.reddit.com/r/IndiaInvestments/.rss
+    type: reddit
+    subreddit: IndiaInvestments
     optional: true
   - id: reddit-indianstockmarket
     name: r/IndianStockMarket
     category: community
-    url: https://www.reddit.com/r/IndianStockMarket/.rss
+    type: reddit
+    subreddit: IndianStockMarket
     optional: true
   - id: reddit-dalalstreettalks
     name: r/DalalStreetTalks
     category: community
-    url: https://www.reddit.com/r/DalalStreetTalks/.rss
+    type: reddit
+    subreddit: DalalStreetTalks
     optional: true
 
   # Video

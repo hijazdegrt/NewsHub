@@ -145,12 +145,82 @@ def source_url(src: dict) -> str:
         return f"https://news.google.com/rss/search?q={quote_plus(src['query'])}&hl=en-IN&gl=IN&ceid=IN:en"
     if kind == "youtube":
         return f"https://www.youtube.com/feeds/videos.xml?channel_id={src['channel']}"
+    if kind == "reddit":  # used only when there is no Reddit API key
+        return f"https://www.reddit.com/r/{src['subreddit']}/.rss"
     return src["url"]
 
 
+# ---------------------------------------------------------------- Reddit API
+# Reddit blocks anonymous automated readers. With a free "script" app key
+# (REDDIT_CLIENT_ID / REDDIT_CLIENT_SECRET, stored as GitHub secrets) the
+# fetcher signs in as the app and reads subreddits through the official API.
+
+REDDIT_UA = "python:newshub-reader:v1.0 (personal news reader)"
+_reddit_token: str | None = None
+
+
+def reddit_login(client: httpx.Client) -> str | None:
+    cid, secret = os.environ.get("REDDIT_CLIENT_ID"), os.environ.get("REDDIT_CLIENT_SECRET")
+    if not cid or not secret:
+        return None
+    try:
+        r = client.post(
+            "https://www.reddit.com/api/v1/access_token",
+            auth=(cid, secret),
+            data={"grant_type": "client_credentials"},
+            headers={"User-Agent": REDDIT_UA},
+        )
+        token = r.json().get("access_token") if r.status_code == 200 else None
+        print(f"  Reddit API login: {'ok' if token else f'failed (HTTP {r.status_code})'}")
+        return token
+    except (httpx.HTTPError, ValueError) as e:
+        print(f"  Reddit API login failed: {type(e).__name__}")
+        return None
+
+
+def fetch_reddit_api(client: httpx.Client, src: dict) -> tuple[list[dict], str]:
+    r = client.get(
+        f"https://oauth.reddit.com/r/{src['subreddit']}/{src.get('sort', 'hot')}",
+        params={"limit": src.get("limit", 30), "raw_json": 1},
+        headers={"Authorization": f"Bearer {_reddit_token}", "User-Agent": REDDIT_UA},
+    )
+    if r.status_code != 200:
+        return [], f"HTTP {r.status_code}"
+    items = []
+    for child in r.json().get("data", {}).get("children", []):
+        p = child.get("data", {})
+        if p.get("stickied") or p.get("over_18") or not p.get("title"):
+            continue
+        link = "https://www.reddit.com" + p.get("permalink", "")
+        title = clean(p["title"])
+        items.append({
+            "id": item_id(link, title),
+            "title": title,
+            "link": link,
+            "source": src["name"],
+            "source_id": src["id"],
+            "category": src["category"],
+            "official": False,
+            "time": iso(datetime.fromtimestamp(p.get("created_utc", time.time()), tz=timezone.utc)),
+            "summary": short(clean(p.get("selftext"))),
+        })
+    return items, ""
+
+
 def fetch_source(client: httpx.Client, src: dict) -> tuple[list[dict], dict]:
-    url = source_url(src)
     status = {"id": src["id"], "name": src["name"], "category": src["category"], "optional": bool(src.get("optional"))}
+    if src.get("type") == "reddit" and _reddit_token:
+        try:
+            items, err = fetch_reddit_api(client, src)
+        except (httpx.HTTPError, ValueError) as e:
+            items, err = [], type(e).__name__
+        if items:
+            status.update(ok=True, count=len(items))
+        else:
+            status.update(ok=False, count=0, error=err or "no items")
+        return items, status
+
+    url = source_url(src)
     last_err = ""
     for attempt in range(2):
         try:
@@ -169,6 +239,8 @@ def fetch_source(client: httpx.Client, src: dict) -> tuple[list[dict], dict]:
             last_err = type(e).__name__
         if attempt == 0:
             time.sleep(2)
+    if src.get("type") == "reddit":
+        last_err += " (no Reddit API key set)"
     status.update(ok=False, count=0, error=last_err)
     return [], status
 
@@ -357,6 +429,8 @@ def main() -> int:
 
     with httpx.Client(headers={"User-Agent": UA, "Accept-Language": "en-IN,en;q=0.9"}, follow_redirects=True, timeout=25) as client:
         previous = load_previous(client)
+        global _reddit_token
+        _reddit_token = reddit_login(client)
         with ThreadPoolExecutor(max_workers=8) as pool:
             results = list(pool.map(lambda s: fetch_source(client, s), cfg["sources"]))
         snapshot = fetch_snapshot(client, cfg.get("snapshot", []))
