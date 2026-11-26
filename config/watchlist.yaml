@@ -1,0 +1,21 @@
+# Your stocks. Any headline or filing that mentions one of these gets a
+# "Watchlist" tag and shows in the Watchlist view.
+#
+#   name     shown on the tag
+#   match    words to look for (case doesn't matter, whole words only).
+#            Include the company's full name as NSE writes it, so filings match.
+#
+# These are examples: replace them with your own.
+# Note: this repository is public, so anyone can read this file.
+
+stocks:
+  - name: Reliance
+    match: [Reliance Industries, RIL]
+  - name: HDFC Bank
+    match: [HDFC Bank]
+  - name: TCS
+    match: [Tata Consultancy Services, TCS]
+  - name: Infosys
+    match: [Infosys]
+  - name: ICICI Bank
+    match: [ICICI Bank]

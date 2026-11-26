@@ -1,0 +1,65 @@
+name: Update news
+
+on:
+  schedule:
+    # GitHub cron runs in UTC. IST = UTC + 5:30.
+    - cron: "*/15 2-10 * * 1-5"   # every 15 min, 7:30 to 16:45 IST, Monday to Friday
+    - cron: "5 * * * *"           # hourly at all other times (and weekends)
+    - cron: "17 0 * * 0"          # weekly keep-alive (see the keepalive job)
+  push:
+    branches: [main]
+  workflow_dispatch: {}           # "Run workflow" button on the Actions tab
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - run: pip install -r requirements.txt
+
+      - id: pages
+        uses: actions/configure-pages@v5
+
+      - name: Fetch news
+        env:
+          # The live site's current data, so history carries over between runs.
+          PREV_URL: ${{ steps.pages.outputs.base_url }}/data/news.json
+        run: python fetcher/fetch.py
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - id: deploy
+        uses: actions/deploy-pages@v4
+
+  # GitHub turns off scheduled workflows in public repos after 60 days with no
+  # activity. Re-enabling the workflow once a week resets that timer.
+  keepalive:
+    if: github.event.schedule == '17 0 * * 0'
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      - env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api -X PUT "repos/${{ github.repository }}/actions/workflows/update.yml/enable"

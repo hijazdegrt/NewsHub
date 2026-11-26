@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Market hub</title>
+  <meta name="description" content="Indian market news, filings and regulator updates in one place.">
+  <meta name="theme-color" content="#09090b">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <script>
+    // Apply the saved theme before anything paints. Dark is the default.
+    (function () {
+      var t = 'dark';
+      try { t = localStorage.getItem('mh.theme') || 'dark'; } catch (e) {}
+      document.documentElement.setAttribute('data-theme', t);
+      document.documentElement.style.colorScheme = t;
+    })();
+  </script>
+  <link rel="stylesheet" href="vendor/oat/oat.min.css">
+  <link rel="stylesheet" href="app.css">
+  <script src="vendor/oat/oat.min.js" defer></script>
+  <script src="app.js" defer></script>
+</head>
+<body data-sidebar-layout>
+  <header data-topnav class="topbar">
+    <button data-sidebar-toggle aria-label="Open menu" class="ghost icon-btn only-mobile">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+    </button>
+    <div class="brand">
+      <strong>Market hub</strong>
+      <small id="updated" class="muted">Loading…</small>
+    </div>
+    <div class="search">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input id="q" type="search" placeholder="Search headlines" aria-label="Search headlines" autocomplete="off">
+    </div>
+    <button id="refresh" class="ghost icon-btn" aria-label="Check for new stories" title="Check for new stories">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></svg>
+    </button>
+    <button id="theme" class="ghost icon-btn" aria-label="Switch light or dark theme" title="Switch theme">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9 7 7 0 0 1-9-9z"/></svg>
+    </button>
+  </header>
+
+  <aside data-sidebar>
+    <nav aria-label="Views">
+      <ul id="views"></ul>
+    </nav>
+    <nav aria-label="Categories">
+      <p class="side-label">Categories</p>
+      <ul id="cats"></ul>
+    </nav>
+    <div class="side-block">
+      <label class="switch-row">
+        <input type="checkbox" role="switch" id="routine">
+        <span>Show routine filings</span>
+      </label>
+    </div>
+    <div class="side-block only-mobile">
+      <p class="side-label">Quick links</p>
+      <div class="links" data-links></div>
+    </div>
+    <footer class="side-foot">
+      <a href="#" id="sources-open">Source status</a>
+    </footer>
+  </aside>
+
+  <main>
+    <div class="snapshot" id="snapshot" aria-label="Market snapshot"></div>
+    <div class="chips only-mobile" id="chips" role="tablist" aria-label="Categories"></div>
+
+    <div class="layout">
+      <section aria-label="News feed">
+        <div id="feed" class="feed" aria-live="polite">
+          <article class="item"><div role="status" class="skeleton line"></div><div role="status" class="skeleton line" style="width:70%"></div></article>
+          <article class="item"><div role="status" class="skeleton line"></div><div role="status" class="skeleton line" style="width:55%"></div></article>
+          <article class="item"><div role="status" class="skeleton line"></div><div role="status" class="skeleton line" style="width:80%"></div></article>
+        </div>
+        <div class="more"><button id="more" class="outline" hidden>Show more</button></div>
+      </section>
+
+      <aside class="rail" aria-label="Snapshot and links">
+        <article class="card">
+          <header><h4>Snapshot</h4></header>
+          <div id="snapshot-rail" class="snap-list"></div>
+          <p class="muted tiny" id="snap-note">Delayed about 15 min.</p>
+        </article>
+        <article class="card">
+          <header><h4>Quick links</h4></header>
+          <div class="links" data-links></div>
+        </article>
+        <p class="muted tiny keys">Keys: <kbd>j</kbd>/<kbd>k</kbd> move, <kbd>o</kbd> open, <kbd>s</kbd> save, <kbd>/</kbd> search</p>
+      </aside>
+    </div>
+  </main>
+
+  <nav class="bottomnav only-mobile" aria-label="Main">
+    <button data-view="all" aria-label="Feed"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v14H4zM8 9h8M8 13h8M8 17h5"/></svg><span>Feed</span></button>
+    <button data-view="watchlist" aria-label="Watchlist"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg><span>Watchlist</span></button>
+    <button data-view="important" aria-label="Important"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v10M12 18v2"/></svg><span>Important</span></button>
+    <button data-view="saved" aria-label="Saved"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18l-6-4-6 4z"/></svg><span>Saved</span></button>
+  </nav>
+
+  <dialog id="sources-dlg">
+    <form method="dialog">
+      <header><h3>Source status</h3><p class="muted" id="sources-when"></p></header>
+      <div class="table-wrap"><table><thead><tr><th>Source</th><th>Items</th><th>Status</th></tr></thead><tbody id="sources-body"></tbody></table></div>
+      <footer><button>Close</button></footer>
+    </form>
+  </dialog>
+</body>
+</html>

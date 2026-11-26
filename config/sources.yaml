@@ -1,0 +1,117 @@
+# Every feed the hub reads. Add or remove a source by editing this file.
+#
+# Fields:
+#   id        short unique name (letters, numbers, dashes)
+#   name      what the page shows as the source
+#   category  filings | regulators | markets | global | community | video
+#   type      rss (default) | gnews (Google News search) | youtube
+#   url       for type rss
+#   query     for type gnews (Google News search syntax, e.g. site:moneycontrol.com)
+#   channel   for type youtube (the channel id that starts with UC)
+#   optional  true = failures are expected sometimes, don't flag them as errors
+
+sources:
+  # Exchange filings
+  - id: nse-announcements
+    name: NSE filing
+    category: filings
+    url: https://nsearchives.nseindia.com/content/RSS/Online_announcements.xml
+
+  # Regulators
+  - id: rbi-press
+    name: RBI
+    category: regulators
+    url: https://www.rbi.org.in/pressreleases_rss.xml
+  - id: rbi-notifications
+    name: RBI notification
+    category: regulators
+    url: https://www.rbi.org.in/notifications_rss.xml
+  - id: sebi-news
+    name: SEBI (via Google News)
+    category: regulators
+    type: gnews
+    query: SEBI (circular OR order OR board OR consultation) when:2d
+
+  # Indian market news
+  - id: et-markets
+    name: ET Markets
+    category: markets
+    url: https://economictimes.indiatimes.com/markets/rssfeeds/1977021501.cms
+  - id: mint-markets
+    name: Mint
+    category: markets
+    url: https://www.livemint.com/rss/markets
+  - id: bs-markets
+    name: Business Standard
+    category: markets
+    url: https://www.business-standard.com/rss/markets-106.rss
+  - id: moneycontrol
+    name: Moneycontrol
+    category: markets
+    type: gnews
+    query: site:moneycontrol.com (stocks OR market OR sensex OR nifty) when:1d
+  - id: gnews-india-markets
+    name: Google News
+    category: markets
+    type: gnews
+    query: (nifty OR sensex OR "FII" OR "dalal street") when:1d
+
+  # Global cues
+  - id: gnews-global
+    name: Google News
+    category: global
+    type: gnews
+    query: ("Federal Reserve" OR "Wall Street" OR "crude oil" OR "US Treasury yields") when:1d
+  - id: reuters-markets
+    name: Reuters
+    category: global
+    type: gnews
+    query: site:reuters.com markets when:1d
+
+  # Community (Reddit often rate-limits automated readers, so these may fail)
+  - id: reddit-indiainvestments
+    name: r/IndiaInvestments
+    category: community
+    url: https://www.reddit.com/r/IndiaInvestments/.rss
+    optional: true
+  - id: reddit-indianstockmarket
+    name: r/IndianStockMarket
+    category: community
+    url: https://www.reddit.com/r/IndianStockMarket/.rss
+    optional: true
+  - id: reddit-dalalstreettalks
+    name: r/DalalStreetTalks
+    category: community
+    url: https://www.reddit.com/r/DalalStreetTalks/.rss
+    optional: true
+
+  # Video
+  - id: yt-cnbctv18
+    name: CNBC-TV18
+    category: video
+    type: youtube
+    channel: UCmRbHAgG2k2vDUvb3xsEunQ
+  - id: yt-zerodha
+    name: Zerodha
+    category: video
+    type: youtube
+    channel: UC59YUBhNLMkS2Q8NBWBGHAA
+
+# Market snapshot (Yahoo Finance's unofficial endpoint, roughly 15 min delayed)
+snapshot:
+  - { symbol: "^NSEI", label: Nifty 50 }
+  - { symbol: "^BSESN", label: Sensex }
+  - { symbol: "^NSEBANK", label: Bank Nifty }
+  - { symbol: "^INDIAVIX", label: India VIX }
+  - { symbol: "INR=X", label: USD/INR }
+  - { symbol: "BZ=F", label: Brent }
+  - { symbol: "ES=F", label: S&P 500 fut }
+
+# Buttons in the "Quick links" panel
+links:
+  - { label: My X list, url: "https://x.com/i/lists" }
+  - { label: NSE announcements, url: "https://www.nseindia.com/companies-listing/corporate-filings-announcements" }
+  - { label: BSE announcements, url: "https://www.bseindia.com/corporates/ann.html" }
+  - { label: GIFT Nifty, url: "https://www.nseix.com/" }
+  - { label: FII/DII data, url: "https://www.nseindia.com/reports/fii-dii" }
+  - { label: Sensibull, url: "https://web.sensibull.com/" }
